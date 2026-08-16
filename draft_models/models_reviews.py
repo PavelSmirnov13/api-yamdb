@@ -24,10 +24,8 @@ class Review(models.Model):
 class Comment(models.Model):
     """Модель для хранения комментариев к отзывам."""
 
-    review = models.ForeignKey(
-        Review,
-        on_delete=models.CASCADE,
-        related_name='comments'
+    review = models.IntegerField(
+        help_text="Заглушка под Review ForeignKey"
     )
     text = models.TextField()
     author = models.IntegerField(
