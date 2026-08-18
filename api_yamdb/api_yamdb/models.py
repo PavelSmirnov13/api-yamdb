@@ -10,7 +10,7 @@ ME = 'me'
 
 
 class Role(models.TextChoices):
-    """Роли у пользователей."""
+    '''Роли у пользователей.'''
 
     USER = 'user', 'Пользователь'
     MODERATOR = 'moderator', 'Модератор'
@@ -18,16 +18,16 @@ class Role(models.TextChoices):
 
 
 def validate_username(value):
-    """Проверка запрещенного имени пользователя."""
+    '''Проверка запрещенного имени пользователя.'''
     if value.lower() == ME:
         raise ValidationError(f'Имя {ME} использовать запрещено!')
 
 
 class User(AbstractUser):
-    """Модель пользователя."""
+    '''Модель пользователя.'''
 
     username = models.CharField(
-        "Имя пользователя", max_length=150,
+        'Имя пользователя', max_length=150,
         unique=True, validators=[UnicodeUsernameValidator(), validate_username]
     )
     email = models.EmailField('Почта', max_length=254, unique=True)
@@ -45,22 +45,22 @@ class User(AbstractUser):
         return self.username
 
     def is_admin(self):
-        """Проверка пользователя на роль Администратор."""
+        '''Проверка пользователя на роль Администратор.'''
         return self.role == Role.ADMIN or self.is_superuser or self.is_staff
 
     def is_moderator(self):
-        """Проверка пользователя на роль Модератора."""
+        '''Проверка пользователя на роль Модератора.'''
         return self.role == Role.MODERATOR
 
 
 class Category(models.Model):
-    """
+    '''
     Модель категории произведения.
 
     Категории определяют тип произведения
     (например, 'Фильмы', 'Книги', 'Музыка').
     Одно произведение может быть привязано только к одной категории.
-    """
+    '''
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True)
 
@@ -73,12 +73,12 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    """
+    '''
     Модель жанра произведения.
 
     Жанры определяют стиль произведения (например, 'Рок', 'Сказка', 'Артхаус').
     Одно произведение может иметь несколько жанров.
-    """
+    '''
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True)
 
@@ -91,13 +91,13 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
-    """
+    '''
     Модель произведения (книга, фильм, музыка).
 
     Произведение — это основной объект, к которому пользователи пишут отзывы.
     Содержит информацию о названии, годе выпуска, описании,
     а также связь с категорией и жанрами.
-    """
+    '''
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True, blank=True, max_length=256)
     year = models.IntegerField()
@@ -126,14 +126,14 @@ class Title(models.Model):
 
     def _generate_base_slug(self):
         base_slug = slugify(self.name)
-        return base_slug or f"title-{uuid.uuid4().hex[:8]}"
+        return base_slug or f'title-{uuid.uuid4().hex[:8]}'
 
     def _generate_candidate_slug(self, base_slug):
         if self.year:
-            candidate = f"{base_slug}-{self.year}"
+            candidate = f'{base_slug}-{self.year}'
             if not self._slug_exists(candidate):
                 return candidate
-        return f"{base_slug}-{uuid.uuid4().hex[:4]}"
+        return f'{base_slug}-{uuid.uuid4().hex[:4]}'
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -146,17 +146,17 @@ class Title(models.Model):
                 attempt += 1
                 if self.year and attempt == 1:
                     # Сначала пробуем с годом
-                    candidate = f"{base_slug}-{self.year}"
+                    candidate = f'{base_slug}-{self.year}'
                 else:
                     # Добавляем случайный суффикс
-                    candidate = f"{base_slug}-{uuid.uuid4().hex[:4]}"
+                    candidate = f'{base_slug}-{uuid.uuid4().hex[:4]}'
             self.slug = candidate
 
         try:
             super().save(*args, **kwargs)
         except IntegrityError:
             # Финальный запасной вариант
-            self.slug = f"{self.slug}-{uuid.uuid4().hex[:4]}"
+            self.slug = f'{self.slug}-{uuid.uuid4().hex[:4]}'
             super().save(*args, **kwargs)
 
     def __str__(self):
@@ -164,7 +164,7 @@ class Title(models.Model):
 
 
 class Review(models.Model):
-    """Модель для хранения отзывов и оценок на произведения."""
+    '''Модель для хранения отзывов и оценок на произведения.'''
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -184,7 +184,7 @@ class Review(models.Model):
 
 
 class Comment(models.Model):
-    """Модель для хранения комментариев к отзывам."""
+    '''Модель для хранения комментариев к отзывам.'''
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
