@@ -10,17 +10,28 @@ ME = 'me'
 
 
 class Role(models.TextChoices):
+    """Роли пользователей в системе."""
     USER = 'user', 'Пользователь'
     MODERATOR = 'moderator', 'Модератор'
     ADMIN = 'admin', 'Администратор'
 
 
 def validate_username(value):
+    """Запрещает использование имени 'me' в качестве username."""
     if value.lower() == ME:
         raise ValidationError(f'Имя {ME} использовать запрещено!')
 
 
 class User(AbstractUser):
+    """
+    Кастомная модель пользователя.
+
+    Расширяет стандартную модель Django:
+    - Добавляет поле role (роль в системе)
+    - Добавляет поле bio (биография)
+    - Использует email как уникальное поле
+    - Запрещает username = 'me'
+    """
     username = models.CharField(
         max_length=150,
         unique=True,
@@ -39,13 +50,22 @@ class User(AbstractUser):
         return self.username
 
     def is_admin(self):
+        """Проверяет, является ли пользователь администратором."""
         return self.role == Role.ADMIN or self.is_superuser or self.is_staff
 
     def is_moderator(self):
+        """Проверяет, является ли пользователь модератором."""
         return self.role == Role.MODERATOR
 
 
 class Category(models.Model):
+    """
+    Модель категории произведения.
+
+    Категории определяют тип произведения
+    (например, 'Фильмы', 'Книги', 'Музыка').
+    Одно произведение может быть привязано только к одной категории.
+    """
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True)
 
@@ -58,6 +78,12 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
+    """
+    Модель жанра произведения.
+
+    Жанры определяют стиль произведения (например, 'Рок', 'Сказка', 'Артхаус').
+    Одно произведение может иметь несколько жанров.
+    """
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True)
 
@@ -70,6 +96,13 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
+    """
+    Модель произведения (книга, фильм, музыка).
+
+    Произведение — это основной объект, к которому пользователи пишут отзывы.
+    Содержит информацию о названии, годе выпуска, описании,
+    а также связь с категорией и жанрами.
+    """
     name = models.CharField(max_length=256)
     slug = models.SlugField(unique=True, blank=True, max_length=256)
     year = models.IntegerField()
@@ -91,39 +124,48 @@ class Title(models.Model):
         verbose_name_plural = 'Произведения'
 
     def _slug_exists(self, slug):
+        """Проверяет, существует ли slug в базе (исключая текущий объект)."""
         qs = Title.objects.filter(slug=slug)
         if self.pk:
             qs = qs.exclude(pk=self.pk)
         return qs.exists()
 
     def _generate_base_slug(self):
+        """Генерирует базовый слаг из названия или UUID."""
         base_slug = slugify(self.name)
         return base_slug or f"title-{uuid.uuid4().hex[:8]}"
 
     def _generate_candidate_slug(self, base_slug):
+        """Генерирует уникальный слаг с проверкой."""
         if self.year:
             candidate = f"{base_slug}-{self.year}"
             if not self._slug_exists(candidate):
                 return candidate
+        # Если год не указан или занят — добавляем случайный суффикс
         return f"{base_slug}-{uuid.uuid4().hex[:4]}"
 
     def save(self, *args, **kwargs):
+        """Сохраняет объект с гарантированно уникальным слагом."""
         if not self.slug:
             base_slug = self._generate_base_slug()
             candidate = self._generate_candidate_slug(base_slug)
 
+            # Гарантируем уникальность с защитой от бесконечного цикла
             attempt = 0
             while self._slug_exists(candidate) and attempt < 10:
                 attempt += 1
                 if self.year and attempt == 1:
+                    # Сначала пробуем с годом
                     candidate = f"{base_slug}-{self.year}"
                 else:
+                    # Добавляем случайный суффикс
                     candidate = f"{base_slug}-{uuid.uuid4().hex[:4]}"
             self.slug = candidate
 
         try:
             super().save(*args, **kwargs)
         except IntegrityError:
+            # Финальный запасной вариант
             self.slug = f"{self.slug}-{uuid.uuid4().hex[:4]}"
             super().save(*args, **kwargs)
 
@@ -132,6 +174,7 @@ class Title(models.Model):
 
 
 class Review(models.Model):
+    """Модель для хранения отзывов и оценок на произведения."""
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -151,6 +194,7 @@ class Review(models.Model):
 
 
 class Comment(models.Model):
+    """Модель для хранения комментариев к отзывам."""
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
