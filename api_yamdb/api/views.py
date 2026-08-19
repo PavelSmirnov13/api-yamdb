@@ -20,9 +20,7 @@ class CategoryViewSet(
     mixins.ListModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Вьюсет для модели Category.
-    Поддерживает создание, удаление и список категорий.
-    """
+    """Вьюсет для модели Category."""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
@@ -31,19 +29,14 @@ class CategoryViewSet(
 
 
 class GenreViewSet(viewsets.ModelViewSet):
-    """Вьюсет для модели Genre.
-    Полный CRUD для жанров.
-    """
+    """Вьюсет для модели Genre."""
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = [IsAdminOrReadOnly]
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    """Вьюсет для модели Title.
-    Поддерживает фильтрацию по категории, жанру и году.
-    Оптимизирован с помощью select_related и prefetch_related.
-    """
+    """Вьюсет для модели Title с фильтрацией и оптимизацией запросов."""
     queryset = (
         Title.objects.all()
         .select_related("category")
@@ -57,35 +50,27 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    """Вьюсет для модели Review.
-    Работает с отзывами на конкретное произведение.
-    """
+    """ViewSet для работы с отзывами."""
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
 
     def get_title(self):
-        """Возвращает объект Title по id из URL."""
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
-        """Возвращает все отзывы на конкретное произведение."""
         return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        """Сохраняет отзыв с автором и произведением."""
         serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    """Вьюсет для модели Comment.
-    Работает с комментариями к конкретному отзыву.
-    """
+    """ViewSet для работы с комментариями."""
     serializer_class = CommentSerializer
     permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
 
     def get_review(self):
-        """Возвращает объект Review по id из URL."""
         return get_object_or_404(
             Review,
             pk=self.kwargs.get('review_id'),
@@ -93,9 +78,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-        """Возвращает все комментарии к конкретному отзыву."""
         return self.get_review().comments.all()
 
     def perform_create(self, serializer):
-        """Сохраняет комментарий с автором и отзывом."""
         serializer.save(author=self.request.user, review=self.get_review())
