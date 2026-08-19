@@ -24,7 +24,8 @@ class IsAuthorOrModeratorOrAdminOrReadOnly(permissions.BasePermission):
         return (
             request.user.is_authenticated and (
                 obj.author == request.user
-                or request.user.is_moderator()
-                or request.user.is_admin()
+                or getattr(request.user, 'is_moderator', False)
+                or getattr(request.user, 'is_admin', False)
+                or request.user.is_superuser
             )
         )
