@@ -43,4 +43,21 @@ class Command(BaseCommand):
                 )
         self.stdout.write(self.style.SUCCESS('✅ Произведения импортированы'))
 
-        self.stdout.write(self.style.SUCCESS('🎉 Импорт завершён!'))
+        # 👇 ДОБАВЬТЕ ЭТОТ БЛОК:
+        # Импорт связей произведений с жанрами
+        try:
+            with open('static/data/genre_title.csv', 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                count = 0
+                for row in reader:
+                    title = Title.objects.get(id=row['title_id'])
+                    genre = Genre.objects.get(id=row['genre_id'])
+                    title.genre.add(genre)
+                    count += 1
+            self.stdout.write(self.style.SUCCESS(
+                f'Связи жанров с произведениями добавлены: {count}'))
+        except FileNotFoundError:
+            self.stdout.write(
+                self.style.WARNING('Файл genre_title.csv не найден'))
+
+        self.stdout.write(self.style.SUCCESS('Импорт завершён!'))

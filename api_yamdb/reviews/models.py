@@ -150,6 +150,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+        ordering = ['-year']
 
     def _slug_exists(self, slug):
         """Проверяет, существует ли slug в базе (исключая текущий объект)."""
