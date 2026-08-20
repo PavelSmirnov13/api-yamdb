@@ -1,6 +1,6 @@
 import csv
 from django.core.management.base import BaseCommand
-from reviews.models import Category, Genre, Title, Review, Comment, User
+from reviews.models import Category, Genre, Title
 
 
 class Command(BaseCommand):
@@ -43,10 +43,11 @@ class Command(BaseCommand):
                 )
         self.stdout.write(self.style.SUCCESS('✅ Произведения импортированы'))
 
-        # 👇 ДОБАВЬТЕ ЭТОТ БЛОК:
-        # Импорт связей произведений с жанрами
         try:
-            with open('static/data/genre_title.csv', 'r', encoding='utf-8') as file:
+            with open(
+                'static/data/genre_title.csv',
+                'r', encoding='utf-8'
+            ) as file:
                 reader = csv.DictReader(file)
                 count = 0
                 for row in reader:

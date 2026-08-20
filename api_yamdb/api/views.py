@@ -1,10 +1,9 @@
 from rest_framework import viewsets, filters, mixins
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from reviews.models import Category, Genre, Title, Review, Comment
+from reviews.models import Category, Genre, Title, Review
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -57,12 +56,12 @@ class TitleViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         genre_slug = self.request.query_params.get('genre')
         category_slug = self.request.query_params.get('category')
-        
+
         if genre_slug:
             queryset = queryset.filter(genre__slug=genre_slug)
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
-            
+
         return queryset
 
     def get_serializer_class(self):
