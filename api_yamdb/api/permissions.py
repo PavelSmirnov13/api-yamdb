@@ -23,7 +23,7 @@ class IsAdminOrReadOnly(BasePermission):
         )
 
 
-class IsAuthorOrStaffOrReadOnly(BasePermission):
+class IsAuthorOrModeratorOrAdminOrReadOnly(BasePermission):
     """Разрешает редактирование автору, модератору или админу."""
 
     def has_permission(self, request, view):
