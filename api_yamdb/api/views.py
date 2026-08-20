@@ -2,6 +2,7 @@ from rest_framework import viewsets, filters, mixins
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
 
 from reviews.models import Category, Genre, Title, Review
 from .serializers import (
@@ -37,6 +38,8 @@ class CategoryViewSet(
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = (
         Title.objects.all()
+        .annotate(rating=Avg('reviews__score'))
+        .order_by('name')
         .select_related('category')
         .prefetch_related('genre')
     )
