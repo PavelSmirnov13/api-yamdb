@@ -1,5 +1,8 @@
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
-from reviews.models import Category, Genre, Title, Review, Comment
+from reviews.models import (
+    Category, Genre, Title, Review, Comment, validate_username
+)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -20,6 +23,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     """Сериализатор для создания и обновления Title."""
+
     category = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Category.objects.all()
@@ -37,6 +41,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 class TitleReadSerializer(serializers.ModelSerializer):
     """Сериализатор для чтения Title."""
+
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
 
@@ -47,6 +52,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Review."""
+
     author = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True
@@ -72,6 +78,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Comment."""
+
     author = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True
@@ -80,3 +87,13 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
+
+
+class SignUpSerializer(serializers.Serializer):
+    """Сериализатор для регистрации нового пользователя."""
+
+    username = serializers.CharField(
+        max_length=150,
+        validators=[UnicodeUsernameValidator(), validate_username]
+    )
+    email = serializers.EmailField(max_length=254)

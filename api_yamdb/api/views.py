@@ -1,7 +1,15 @@
-from rest_framework import viewsets, filters, mixins
+from django.db import IntegrityError
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import viewsets, filters, mixins, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from reviews.models import Category, Genre, Title, Review
 from .serializers import (
@@ -10,12 +18,16 @@ from .serializers import (
     TitleReadSerializer,
     TitleWriteSerializer,
     ReviewSerializer,
-    CommentSerializer
+    CommentSerializer,
+    SignUpSerializer
 )
 from .permissions import (
     IsAdminOrReadOnly,
     IsAuthorOrModeratorOrAdminOrReadOnly
 )
+
+
+User = get_user_model()
 
 
 class CategoryViewSet(
@@ -120,3 +132,29 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, review=self.get_review())
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup(request):
+    """Функция отвечающая за регистрацию пользователей."""
+
+    serializer = SignUpSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    username = serializer.validated_data['username']
+    email = serializer.validated_data['email']
+    try:
+        user, _ = User.objects.get_or_create(username=username, email=email)
+    except IntegrityError:
+        return Response(
+            {'error': 'Такой username или email уже заняты'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        'Код подтверждения',
+        f'Ваш код {confirmation_code}',
+        settings.DEFAULT_FROM_EMAIL,
+        [email]
+    )
+    return Response(serializer.data, status=status.HTTP_200_OK)
