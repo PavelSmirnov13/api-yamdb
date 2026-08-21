@@ -1,7 +1,7 @@
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from reviews.models import (
-    Category, Genre, Title, Review, Comment, validate_username
+    Category, Genre, Title, Review, Comment, User, validate_username
 )
 
 
@@ -33,10 +33,14 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Genre.objects.all()
     )
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'category', 'genre')
+        fields = (
+            'id', 'name', 'year', 'rating',
+            'description', 'category', 'genre'
+        )
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
@@ -97,3 +101,27 @@ class SignUpSerializer(serializers.Serializer):
         validators=[UnicodeUsernameValidator(), validate_username]
     )
     email = serializers.EmailField(max_length=254)
+
+
+class TokenSerializer(serializers.Serializer):
+    """Сериализатор для получения токена."""
+
+    username = serializers.CharField(max_length=150)
+    confirmation_code = serializers.CharField()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для CRUD Администратора."""
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+        )
+
+
+class MeSerializer(UserSerializer):
+    """Сериализатор для профиля пользователя."""
+
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ('role',)

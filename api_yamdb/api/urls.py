@@ -7,9 +7,13 @@ from .views import (
     GenreViewSet,
     ReviewViewSet,
     TitleViewSet,
+    UserViewSet,
+    signup,
+    token_generate,
 )
 
 router = DefaultRouter()
+router.register('users', UserViewSet, basename='users')
 router.register('categories', CategoryViewSet, basename='category')
 router.register('genres', GenreViewSet, basename='genre')
 router.register('titles', TitleViewSet, basename='title')
@@ -26,4 +30,6 @@ router.register(
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('auth/signup/', signup, name='signup'),
+    path('auth/token/', token_generate, name='token_generate'),
 ]
