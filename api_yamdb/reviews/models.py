@@ -1,10 +1,13 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, IntegrityError
 from django.utils.text import slugify
-import uuid
+
 
 ME = 'me'
 
@@ -213,8 +216,17 @@ class Review(models.Model):
         related_name='reviews'
     )
     text = models.TextField()
-    score = models.IntegerField()
+    score = models.IntegerField(
+        validators=[
+            MinValueValidator(1, 'Оценка не может быть меньше 1'),
+            MaxValueValidator(10, 'Оценка не может быть больше 10')
+        ]
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('-pub_date',)
+        unique_together = ('title', 'author')
 
     def __str__(self):
         return f'{self.author} - {self.title}'
