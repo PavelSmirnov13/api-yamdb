@@ -38,9 +38,6 @@ class User(AbstractUser):
     role = models.CharField(
         'Роль', max_length=32, choices=Role.choices, default=Role.USER,
     )
-    confirmation_code = models.CharField(
-        'Код подтверждения', max_length=70, blank=True, default='0',
-    )
 
     class Meta:
         ordering = ('username',)
