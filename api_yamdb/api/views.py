@@ -1,5 +1,4 @@
 from django.db import IntegrityError
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -154,17 +153,17 @@ def signup(request):
     serializer.is_valid(raise_exception=True)
     username = serializer.validated_data['username']
     email = serializer.validated_data['email']
-    try:
-        user, _ = User.objects.get_or_create(username=username, email=email)
-    except IntegrityError:
-        return Response(
-            {'error': 'Такой username или email уже заняты'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    confirmation_code = default_token_generator.make_token(user)
+    conflicts = {}
+    if User.objects.filter(username=username).exclude(email=email).exists():
+        conflicts['username'] = ['Имя занято другим пользователем']
+    if User.objects.filter(email=email).exclude(username=username).exists():
+        conflicts['email'] = ['Почта занята другим пользователем']
+    if conflicts:
+        return Response(conflicts, status=status.HTTP_400_BAD_REQUEST)
+    user, _ = User.objects.get_or_create(username=username, email=email)
     send_mail(
         'Код подтверждения',
-        f'Ваш код {confirmation_code}',
+        f'Ваш код {user.confirmation_code}',
         settings.DEFAULT_FROM_EMAIL,
         [email]
     )
@@ -181,7 +180,7 @@ def token_generate(request):
     username = serializer.validated_data['username']
     user = get_object_or_404(User, username=username)
     confirmation_code = serializer.validated_data['confirmation_code']
-    if not default_token_generator.check_token(user, confirmation_code):
+    if user.confirmation_code != confirmation_code:
         return Response(
             {'confirmation_code': 'Неверный код подтверждения'},
             status=status.HTTP_400_BAD_REQUEST
