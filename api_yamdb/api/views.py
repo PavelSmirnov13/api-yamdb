@@ -1,4 +1,3 @@
-from django.db import IntegrityError
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
@@ -154,13 +153,14 @@ def signup(request):
     serializer.is_valid(raise_exception=True)
     username = serializer.validated_data['username']
     email = serializer.validated_data['email']
-    try:
-        user, _ = User.objects.get_or_create(username=username, email=email)
-    except IntegrityError:
-        return Response(
-            {'error': 'Такой username или email уже заняты'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    conflicts = {}
+    if User.objects.filter(username=username).exclude(email=email).exists():
+        conflicts['username'] = ['Имя занято другим пользователем']
+    if User.objects.filter(email=email).exclude(username=username).exists():
+        conflicts['email'] = ['Почта занята другим пользователем']
+    if conflicts:
+        return Response(conflicts, status=status.HTTP_400_BAD_REQUEST)
+    user, _ = User.objects.get_or_create(username=username, email=email)
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         'Код подтверждения',
