@@ -14,13 +14,14 @@
 Создание, изменение и удаление отзывов, комментариев, оценок - доступ предоставлен Автору. Доступ на редактирование и удаление отзывов и комментариев любых пользователей предоставлен Модератору. Полный доступ к любому контенту предоставлен Администраторам. Неаутентифицированным пользователям доступ предоставлен на чтение: отзывов, комментариев и просмотр оценок к произведениям.
 
 ## Стек технологий:
+
 - Python 3.12
 - Django 5.1
 - Django REST Framework
 - djangorestframework-simplejwt - аутентификация по JWT-токенам
 - SQLite
 
-### Инструкция к запуску проекта:
+## Инструкция к запуску проекта:
 
 Клонировать репозиторий и перейти на него в командной строке:
 git clone git@github.com:PavelSmirnov13/api-yamdb.git
@@ -69,76 +70,88 @@ text
 
 API будет доступен по адресу http://127.0.0.1:8000/api/v1/.
 
-### Примеры запросов:
+## Примеры запросов:
 
-#### Регистрация пользователя
+### Регистрация пользователя
 
 POST /auth/signup/
 
 Тело запроса:
-```json
 {
-    "email": "user@example.com",
-    "username": "string"
+"email": "user@example.com",
+"username": "string"
 }
-Тело ответа:
 
-json
+text
+
+Тело ответа:
 {
-    "email": "string",
-    "username": "string"
+"email": "string",
+"username": "string"
 }
-Получение токена
+
+text
+
+### Получение токена
+
 POST /auth/token/
 
 Тело запроса:
-
-json
 {
-    "username": "string",
-    "confirmation_code": "string"
+"username": "string",
+"confirmation_code": "string"
 }
+
+text
+
 Тело ответа:
-
-json
 {
-    "token": "string"
+"token": "string"
 }
-Получение списка произведений
+
+text
+
+### Получение списка произведений
+
 GET /titles/
 
 Тело ответа:
-
-json
 {
-    "count": 0,
-    "next": "string",
-    "previous": "string",
-    "results": [{}]
+"count": 0,
+"next": "string",
+"previous": "string",
+"results": [{}]
 }
-Создание отзыва
+
+text
+
+### Создание отзыва
+
 POST /titles/{title_id}/reviews/
 
 Тело запроса:
-
-json
 {
-    "text": "string",
-    "score": 1
+"text": "string",
+"score": 1
 }
+
+text
+
 Тело ответа:
-
-json
 {
-    "id": 0,
-    "text": "string",
-    "author": "string",
-    "score": 1,
-    "pub_date": "2019-08-24T14:15:22Z"
+"id": 0,
+"text": "string",
+"author": "string",
+"score": 1,
+"pub_date": "2019-08-24T14:15:22Z"
 }
+
+text
+
 Также с полной документацией можно ознакомиться, пройдя по адресу http://127.0.0.1:8000/redoc/
 
-Авторы:
+## Авторы:
+
 Ivan - разработка блока пользователей и аутентификации
 Pavel - разработка блока произведений с импортом csv
 Alexsandr - разработка блока отзывов с комментариями

@@ -20,9 +20,9 @@ class Role(models.TextChoices):
     ADMIN = 'admin', 'Администратор'
 
 
-def validate_username(value):
+def validate_username(username):
     """Проверка запрещенного имени пользователя."""
-    if value.lower() == ME:
+    if username.lower() == ME:
         raise ValidationError(f'Имя {ME} использовать запрещено!')
 
 
@@ -30,7 +30,7 @@ class User(AbstractUser):
     """Модель пользователя."""
 
     username = models.CharField(
-        "Имя пользователя", max_length=150,
+        'Имя пользователя', max_length=150,
         unique=True, validators=[UnicodeUsernameValidator(), validate_username]
     )
     email = models.EmailField('Почта', max_length=254, unique=True)
@@ -47,74 +47,72 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+    @property
     def is_admin(self):
         """Проверка пользователя на роль Администратор."""
         return self.role == Role.ADMIN or self.is_superuser or self.is_staff
 
+    @property
     def is_moderator(self):
         """Проверка пользователя на роль Модератора."""
-        return self.role == Role.MODERATOR
+        return (
+            self.role == Role.MODERATOR
+            or self.is_superuser
+            or self.is_staff
+        )
 
 
 class Category(models.Model):
-    """
-    Модель категории произведения.
+    """Модель категории произведения.
 
-    Категории определяют тип произведения
-    (например, 'Фильмы', 'Книги', 'Музыка').
-    Одно произведение может быть привязано только к одной категории.
+    Категории определяют тип произведения.
     """
+
     name = models.CharField(
         max_length=256,
         help_text='Название категории'
     )
     slug = models.SlugField(
         unique=True,
-        help_text='Уникальный идентификатор для URL (например, "films")'
+        help_text='Уникальный идентификатор для URL'
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
     def __str__(self):
-        """Возвращает название категории."""
         return self.name
 
 
 class Genre(models.Model):
-    """
-    Модель жанра произведения.
+    """Модель жанра произведения.
 
-    Жанры определяют стиль произведения (например, 'Рок', 'Сказка', 'Артхаус').
-    Одно произведение может иметь несколько жанров.
+    Жанры определяют стиль произведения.
     """
+
     name = models.CharField(
         max_length=256,
         help_text='Название жанра'
     )
     slug = models.SlugField(
         unique=True,
-        help_text='Уникальный идентификатор для URL (например, "rock")'
+        help_text='Уникальный идентификатор для URL'
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
     def __str__(self):
-        """Возвращает название жанра."""
         return self.name
 
 
 class Title(models.Model):
-    """
-    Модель произведения (книга, фильм, музыка).
+    """Модель произведения (книга, фильм, музыка)."""
 
-    Произведение — это основной объект, к которому пользователи пишут отзывы.
-    Содержит информацию о названии, годе выпуска, описании,
-    а также связь с категорией и жанрами.
-    """
     name = models.CharField(
         max_length=256,
         help_text='Название произведения'
@@ -123,40 +121,39 @@ class Title(models.Model):
         unique=True,
         blank=True,
         max_length=256,
-        help_text=(
-            'Уникальный идентификатор для URL.'
-            ' Генерируется автоматически из названия.'
-        )
+        help_text='Уникальный идентификатор для URL'
     )
-    year = models.IntegerField(
+    year = models.SmallIntegerField(
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(9999)
+        ],
         help_text='Год выпуска произведения'
     )
     description = models.TextField(
-        null=True,
         blank=True,
         help_text='Описание произведения (необязательно)'
     )
-
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
         related_name='titles',
-        help_text='Категория произведения (например, "Фильмы")'
+        help_text='Категория произведения'
     )
     genre = models.ManyToManyField(
         Genre,
         related_name='titles',
-        help_text='Жанры произведения (например, "Рок", "Сказка")'
+        help_text='Жанры произведения'
     )
 
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
-        ordering = ['-year']
+        ordering = ('-year',)
 
     def _slug_exists(self, slug):
-        """Проверяет, существует ли slug в базе (исключая текущий объект)."""
+        """Проверяет, существует ли slug в базе."""
         qs = Title.objects.filter(slug=slug)
         if self.pk:
             qs = qs.exclude(pk=self.pk)
@@ -164,38 +161,31 @@ class Title(models.Model):
 
     def _generate_base_slug(self):
         """Генерирует базовый слаг из названия или UUID."""
-        base_slug = slugify(self.name)
-        return base_slug or f"title-{uuid.uuid4().hex[:8]}"
+        return slugify(self.name) or f'title-{uuid.uuid4().hex[:8]}'
 
     def _generate_candidate_slug(self, base_slug):
         """Генерирует уникальный слаг с проверкой."""
         if self.year:
-            candidate = f"{base_slug}-{self.year}"
+            candidate = f'{base_slug}-{self.year}'
             if not self._slug_exists(candidate):
                 return candidate
-
-        # Если год не указан или занят — добавляем случайный суффикс
-        return f"{base_slug}-{uuid.uuid4().hex[:4]}"
+        return f'{base_slug}-{uuid.uuid4().hex[:4]}'
 
     def save(self, *args, **kwargs):
         """Сохраняет объект с гарантированно уникальным слагом."""
         if not self.slug:
             base_slug = self._generate_base_slug()
             candidate = self._generate_candidate_slug(base_slug)
-
             attempt = 0
             while self._slug_exists(candidate) and attempt < 10:
                 attempt += 1
-                if self.year and attempt == 1:
-                    candidate = f"{base_slug}-{self.year}"
-                else:
-                    candidate = f"{base_slug}-{uuid.uuid4().hex[:4]}"
+                candidate = f'{base_slug}-{uuid.uuid4().hex[:4]}'
             self.slug = candidate
 
         try:
             super().save(*args, **kwargs)
         except IntegrityError:
-            self.slug = f"{self.slug}-{uuid.uuid4().hex[:4]}"
+            self.slug = f'{self.slug}-{uuid.uuid4().hex[:4]}'
             super().save(*args, **kwargs)
 
     def __str__(self):
@@ -216,17 +206,24 @@ class Review(models.Model):
         related_name='reviews'
     )
     text = models.TextField()
-    score = models.IntegerField(
+    score = models.SmallIntegerField(
         validators=[
             MinValueValidator(1, 'Оценка не может быть меньше 1'),
             MaxValueValidator(10, 'Оценка не может быть больше 10')
         ]
     )
-    pub_date = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ('-pub_date',)
-        unique_together = ('title', 'author')
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('title', 'author'),
+                name='unique_review'
+            )
+        ]
 
     def __str__(self):
         return f'{self.author} - {self.title}'
@@ -246,10 +243,12 @@ class Comment(models.Model):
         related_name='comments'
     )
     text = models.TextField()
-    pub_date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f'{self.author} - {self.review}'
+    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         ordering = ('-pub_date',)
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+
+    def __str__(self):
+        return f'{self.author} - {self.review}'
