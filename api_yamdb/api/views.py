@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 from django.contrib.auth.tokens import default_token_generator
+=======
+﻿from django.contrib.auth.tokens import default_token_generator
+>>>>>>> develop
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -12,7 +16,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+<<<<<<< HEAD
 from reviews.models import Category, Genre, Title, Review, User
+=======
+from reviews.models import Category, Genre, Title, Review
+>>>>>>> develop
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
@@ -43,18 +51,28 @@ class CategoryViewSet(
 ):
     """Вьюсет для модели Category."""
 
+<<<<<<< HEAD
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
     lookup_field = "slug"
+=======
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
+    lookup_field = 'slug'
+>>>>>>> develop
     pagination_class = PageNumberPagination
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = (
         Title.objects.all()
+<<<<<<< HEAD
         .annotate(rating=Avg("reviews__score"))
         .order_by("name")
         .select_related("category")
@@ -70,12 +88,34 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ["name"]
     ordering_fields = ["name", "year"]
     http_method_names = ["get", "post", "patch", "delete"]
+=======
+        .annotate(rating=Avg('reviews__score'))
+        .order_by('name')
+        .select_related('category')
+        .prefetch_related('genre')
+    )
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = (
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_fields = ('category__slug', 'year', 'name')
+    search_fields = ('name',)
+    ordering_fields = ('name', 'year')
+    http_method_names = ('get', 'post', 'patch', 'delete')
+>>>>>>> develop
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
+<<<<<<< HEAD
         genre_slug = self.request.query_params.get("genre")
         category_slug = self.request.query_params.get("category")
+=======
+        genre_slug = self.request.query_params.get('genre')
+        category_slug = self.request.query_params.get('category')
+>>>>>>> develop
 
         if genre_slug:
             queryset = queryset.filter(genre__slug=genre_slug)
@@ -85,7 +125,11 @@ class TitleViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
+<<<<<<< HEAD
         if self.action in ("list", "retrieve"):
+=======
+        if self.action in {'list', 'retrieve'}:
+>>>>>>> develop
             return TitleReadSerializer
         return TitleWriteSerializer
 
@@ -99,10 +143,17 @@ class GenreViewSet(
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = [IsAdminOrReadOnly]
+<<<<<<< HEAD
     lookup_field = "slug"
     pagination_class = PageNumberPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
+=======
+    lookup_field = 'slug'
+    pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+>>>>>>> develop
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -110,10 +161,17 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     serializer_class = ReviewSerializer
     permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+<<<<<<< HEAD
     http_method_names = ["get", "post", "patch", "delete"]
 
     def get_title(self):
         title_id = self.kwargs.get("title_id")
+=======
+    http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_title(self):
+        title_id = self.kwargs.get('title_id')
+>>>>>>> develop
         return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
@@ -128,13 +186,22 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     serializer_class = CommentSerializer
     permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+<<<<<<< HEAD
     http_method_names = ["get", "post", "patch", "delete"]
+=======
+    http_method_names = ('get', 'post', 'patch', 'delete')
+>>>>>>> develop
 
     def get_review(self):
         return get_object_or_404(
             Review,
+<<<<<<< HEAD
             pk=self.kwargs.get("review_id"),
             title_id=self.kwargs.get("title_id"),
+=======
+            pk=self.kwargs.get('review_id'),
+            title_id=self.kwargs.get('title_id'),
+>>>>>>> develop
         )
 
     def get_queryset(self):
@@ -144,7 +211,11 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user, review=self.get_review())
 
 
+<<<<<<< HEAD
 @api_view(['POST'])
+=======
+@api_view(('POST',))
+>>>>>>> develop
 @permission_classes([AllowAny])
 def signup(request):
     """Регистрация пользователей."""
@@ -171,7 +242,11 @@ def signup(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+<<<<<<< HEAD
 @api_view(['POST'])
+=======
+@api_view(('POST',))
+>>>>>>> develop
 @permission_classes([AllowAny])
 def token_generate(request):
     """Выдаёт JWT-токен в обмен на код подверждения."""
@@ -197,6 +272,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     lookup_field = 'username'
+<<<<<<< HEAD
     filter_backends = [filters.SearchFilter]
     search_fields = ['username']
     http_method_names = ['get', 'post', 'patch', 'delete', 'options', 'head']
@@ -215,3 +291,28 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         serializer = MeSerializer(request.user)
         return Response(serializer.data)
+=======
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'options', 'head')
+
+    @action(
+        detail=False,
+        methods=('get',),
+        permission_classes=(IsAuthenticated,)
+    )
+    def me(self, request):
+        """Получение данных своего профиля."""
+        serializer = MeSerializer(request.user)
+        return Response(serializer.data)
+
+    @me.mapping.patch
+    def patch_me(self, request):
+        """Изменение данных своего профиля."""
+        serializer = MeSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+>>>>>>> develop
