@@ -6,7 +6,6 @@ from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -47,7 +46,7 @@ class CategoryViewSet(
     search_fields = ('name',)
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
     pagination_class = PageNumberPagination
 
@@ -60,7 +59,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         .select_related('category')
         .prefetch_related('genre')
     )
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -98,7 +97,7 @@ class GenreViewSet(
 ):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
     pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
@@ -109,7 +108,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с отзывами."""
 
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+    permission_classes = (IsAuthorOrModeratorOrAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_title(self):
@@ -127,7 +126,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с комментариями."""
 
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+    permission_classes = (IsAuthorOrModeratorOrAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_review(self):
@@ -151,22 +150,13 @@ def signup(request):
 
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    username = serializer.validated_data['username']
-    email = serializer.validated_data['email']
-    conflicts = {}
-    if User.objects.filter(username=username).exclude(email=email).exists():
-        conflicts['username'] = ['Имя занято другим пользователем']
-    if User.objects.filter(email=email).exclude(username=username).exists():
-        conflicts['email'] = ['Почта занята другим пользователем']
-    if conflicts:
-        raise ValidationError(conflicts)
-    user, _ = User.objects.get_or_create(username=username, email=email)
+    user = serializer.save()
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         'Код подтверждения',
         f'Ваш код {confirmation_code}',
         settings.DEFAULT_FROM_EMAIL,
-        [email]
+        [user.email]
     )
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -178,13 +168,7 @@ def token_generate(request):
 
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    username = serializer.validated_data['username']
-    user = get_object_or_404(User, username=username)
-    confirmation_code = serializer.validated_data['confirmation_code']
-    if not default_token_generator.check_token(user, confirmation_code):
-        raise ValidationError(
-            {'confirmation_code': 'Неверный код подтверждения'}
-        )
+    user = serializer.validated_data['user']
     new_token = AccessToken.for_user(user)
     return Response({'token': str(new_token)}, status=status.HTTP_200_OK)
 
@@ -194,7 +178,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = (IsAdmin,)
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
