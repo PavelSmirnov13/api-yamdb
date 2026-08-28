@@ -206,7 +206,8 @@ class Review(models.Model):
         related_name='reviews'
     )
     text = models.TextField()
-    score = models.SmallIntegerField(
+    score = models.PositiveSmallIntegerField(
+        'Оценка',
         validators=[
             MinValueValidator(1, 'Оценка не может быть меньше 1'),
             MaxValueValidator(10, 'Оценка не может быть больше 10')
