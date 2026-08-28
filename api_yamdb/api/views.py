@@ -1,36 +1,36 @@
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
-from rest_framework import viewsets, filters, mixins, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Genre, Title, Review
-from .serializers import (
-    CategorySerializer,
-    GenreSerializer,
-    TitleReadSerializer,
-    TitleWriteSerializer,
-    ReviewSerializer,
-    CommentSerializer,
-    SignUpSerializer,
-    TokenSerializer,
-    UserSerializer,
-    MeSerializer,
-)
 from .permissions import (
     IsAdmin,
     IsAdminOrReadOnly,
     IsAuthorOrModeratorOrAdminOrReadOnly,
 )
-
+from .serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    MeSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    TokenSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -145,7 +145,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 @api_view(('POST',))
-@permission_classes([AllowAny])
+@permission_classes((AllowAny,))
 def signup(request):
     """Регистрация пользователей."""
 
@@ -172,9 +172,9 @@ def signup(request):
 
 
 @api_view(('POST',))
-@permission_classes([AllowAny])
+@permission_classes((AllowAny,))
 def token_generate(request):
-    """Выдаёт JWT-токен в обмен на код подверждения."""
+    """Выдаёт JWT-токен в обмен на код подтверждения."""
 
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -182,9 +182,8 @@ def token_generate(request):
     user = get_object_or_404(User, username=username)
     confirmation_code = serializer.validated_data['confirmation_code']
     if not default_token_generator.check_token(user, confirmation_code):
-        return Response(
-            {'confirmation_code': 'Неверный код подтверждения'},
-            status=status.HTTP_400_BAD_REQUEST
+        raise ValidationError(
+            {'confirmation_code': 'Неверный код подтверждения'}
         )
     new_token = AccessToken.for_user(user)
     return Response({'token': str(new_token)}, status=status.HTTP_200_OK)
