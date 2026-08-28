@@ -1,3 +1,4 @@
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 from reviews.models import (
@@ -9,6 +10,8 @@ from reviews.models import (
     User,
     validate_username,
 )
+from reviews.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_USERNAME
+from rest_framework.exceptions import NotFound
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -100,17 +103,55 @@ class SignUpSerializer(serializers.Serializer):
     """Сериализатор для регистрации нового пользователя."""
 
     username = serializers.CharField(
-        max_length=150,
+        max_length=MAX_LENGTH_USERNAME,
         validators=[UnicodeUsernameValidator(), validate_username],
     )
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=MAX_LENGTH_EMAIL)
+
+    def validate(self, attrs):
+        """Валидация логина и почты."""
+        username = attrs['username']
+        email = attrs['email']
+        conflicts = {}
+        if User.objects.filter(
+            username=username
+        ).exclude(email=email).exists():
+            conflicts['username'] = ['Имя занято другим пользователем']
+        if User.objects.filter(
+            email=email
+        ).exclude(username=username).exists():
+            conflicts['email'] = ['Почта занята другим пользователем']
+        if conflicts:
+            raise serializers.ValidationError(conflicts)
+        return attrs
+
+    def save(self):
+        """Создает пользователя."""
+        return User.objects.get_or_create(
+            username=self.validated_data['username'],
+            email=self.validated_data['email'],
+        )[0]
 
 
 class TokenSerializer(serializers.Serializer):
     """Сериализатор для получения токена."""
 
-    username = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=MAX_LENGTH_USERNAME)
     confirmation_code = serializers.CharField()
+
+    def validate(self, attrs):
+        """Валидация токена."""
+        username = attrs['username']
+        user = User.objects.filter(username=username).first()
+        if not user:
+            raise NotFound('Пользователь не найден')
+        confirmation_code = attrs['confirmation_code']
+        if not default_token_generator.check_token(user, confirmation_code):
+            raise serializers.ValidationError({
+                'confirmation_code': 'Неверный код подтверждения!'
+            })
+        attrs['user'] = user
+        return attrs
 
 
 class UserSerializer(serializers.ModelSerializer):

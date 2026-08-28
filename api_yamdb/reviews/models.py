@@ -8,6 +8,14 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, IntegrityError
 from django.utils.text import slugify
 
+from .constants import (
+    MAX_LENGTH_EMAIL,
+    MAX_LENGTH_NAME,
+    MAX_LENGTH_ROLE,
+    MAX_LENGTH_SLUG,
+    MAX_LENGTH_USERNAME,
+)
+
 
 ME = 'me'
 
@@ -30,13 +38,22 @@ class User(AbstractUser):
     """Модель пользователя."""
 
     username = models.CharField(
-        'Имя пользователя', max_length=150,
-        unique=True, validators=[UnicodeUsernameValidator(), validate_username]
+        'Имя пользователя',
+        max_length=MAX_LENGTH_USERNAME,
+        unique=True,
+        validators=[UnicodeUsernameValidator(), validate_username],
     )
-    email = models.EmailField('Почта', max_length=254, unique=True)
+    email = models.EmailField(
+        'Почта',
+        max_length=MAX_LENGTH_EMAIL,
+        unique=True,
+    )
     bio = models.TextField('Биография', blank=True)
     role = models.CharField(
-        'Роль', max_length=32, choices=Role.choices, default=Role.USER,
+        'Роль',
+        max_length=MAX_LENGTH_ROLE,
+        choices=Role.choices,
+        default=Role.USER,
     )
 
     class Meta:
@@ -69,12 +86,15 @@ class Category(models.Model):
     """
 
     name = models.CharField(
-        max_length=256,
-        help_text='Название категории'
+        'Название',
+        max_length=MAX_LENGTH_NAME,
+        help_text='Название категории',
     )
     slug = models.SlugField(
+        'Слаг',
         unique=True,
-        help_text='Уникальный идентификатор для URL'
+        max_length=MAX_LENGTH_SLUG,
+        help_text='Уникальный идентификатор для URL',
     )
 
     class Meta:
@@ -93,12 +113,15 @@ class Genre(models.Model):
     """
 
     name = models.CharField(
-        max_length=256,
-        help_text='Название жанра'
+        'Название',
+        max_length=MAX_LENGTH_NAME,
+        help_text='Название жанра',
     )
     slug = models.SlugField(
+        'Слаг',
         unique=True,
-        help_text='Уникальный идентификатор для URL'
+        max_length=MAX_LENGTH_SLUG,
+        help_text='Уникальный идентификатор для URL',
     )
 
     class Meta:
@@ -114,37 +137,43 @@ class Title(models.Model):
     """Модель произведения (книга, фильм, музыка)."""
 
     name = models.CharField(
-        max_length=256,
-        help_text='Название произведения'
+        'Название',
+        max_length=MAX_LENGTH_NAME,
+        help_text='Название произведения',
     )
     slug = models.SlugField(
+        'Слаг',
         unique=True,
         blank=True,
-        max_length=256,
-        help_text='Уникальный идентификатор для URL'
+        max_length=MAX_LENGTH_SLUG,
+        help_text='Уникальный идентификатор для URL',
     )
     year = models.SmallIntegerField(
+        'Год',
         validators=[
             MinValueValidator(0),
-            MaxValueValidator(9999)
+            MaxValueValidator(9999),
         ],
-        help_text='Год выпуска произведения'
+        help_text='Год выпуска произведения',
     )
     description = models.TextField(
+        'Описание',
         blank=True,
-        help_text='Описание произведения (необязательно)'
+        help_text='Описание произведения (необязательно)',
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         null=True,
         related_name='titles',
-        help_text='Категория произведения'
+        verbose_name='Категория',
+        help_text='Категория произведения',
     )
     genre = models.ManyToManyField(
         Genre,
         related_name='titles',
-        help_text='Жанры произведения'
+        verbose_name='Жанры',
+        help_text='Жанры произведения',
     )
 
     class Meta:
@@ -198,21 +227,28 @@ class Review(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='reviews'
+        related_name='reviews',
+        verbose_name='Автор',
     )
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
-        related_name='reviews'
+        related_name='reviews',
+        verbose_name='Произведение',
     )
-    text = models.TextField()
-    score = models.SmallIntegerField(
+    text = models.TextField('Текст')
+    score = models.PositiveSmallIntegerField(
+        'Оценка',
         validators=[
             MinValueValidator(1, 'Оценка не может быть меньше 1'),
-            MaxValueValidator(10, 'Оценка не может быть больше 10')
-        ]
+            MaxValueValidator(10, 'Оценка не может быть больше 10'),
+        ],
     )
-    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True,
+        db_index=True,
+    )
 
     class Meta:
         ordering = ('-pub_date',)
@@ -221,7 +257,7 @@ class Review(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('title', 'author'),
-                name='unique_review'
+                name='unique_review',
             )
         ]
 
@@ -235,15 +271,21 @@ class Comment(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='comments'
+        related_name='comments',
+        verbose_name='Автор',
     )
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
-        related_name='comments'
+        related_name='comments',
+        verbose_name='Отзыв',
     )
-    text = models.TextField()
-    pub_date = models.DateTimeField(auto_now_add=True, db_index=True)
+    text = models.TextField('Текст')
+    pub_date = models.DateTimeField(
+        'Дата публикации',
+        auto_now_add=True,
+        db_index=True,
+    )
 
     class Meta:
         ordering = ('-pub_date',)

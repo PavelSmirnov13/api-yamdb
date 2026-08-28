@@ -2,11 +2,13 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.pagination import PageNumberPagination
-from rest_framework import viewsets, filters, mixins, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -15,22 +17,16 @@ from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Category, Genre, Title, Review
 from .serializers import (
     CategorySerializer,
+    CommentSerializer,
     GenreSerializer,
+    MeSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
     TitleReadSerializer,
     TitleWriteSerializer,
-    ReviewSerializer,
-    CommentSerializer,
-    SignUpSerializer,
     TokenSerializer,
     UserSerializer,
-    MeSerializer,
 )
-from .permissions import (
-    IsAdmin,
-    IsAdminOrReadOnly,
-    IsAuthorOrModeratorOrAdminOrReadOnly,
-)
-
 
 User = get_user_model()
 
@@ -47,7 +43,7 @@ class CategoryViewSet(
     search_fields = ('name',)
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
     pagination_class = PageNumberPagination
 
@@ -60,7 +56,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         .select_related('category')
         .prefetch_related('genre')
     )
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -151,22 +147,13 @@ def signup(request):
 
     serializer = SignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    username = serializer.validated_data['username']
-    email = serializer.validated_data['email']
-    conflicts = {}
-    if User.objects.filter(username=username).exclude(email=email).exists():
-        conflicts['username'] = ['Имя занято другим пользователем']
-    if User.objects.filter(email=email).exclude(username=username).exists():
-        conflicts['email'] = ['Почта занята другим пользователем']
-    if conflicts:
-        return Response(conflicts, status=status.HTTP_400_BAD_REQUEST)
-    user, _ = User.objects.get_or_create(username=username, email=email)
+    user = serializer.save()
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         'Код подтверждения',
         f'Ваш код {confirmation_code}',
         settings.DEFAULT_FROM_EMAIL,
-        [email]
+        [user.email]
     )
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -174,18 +161,11 @@ def signup(request):
 @api_view(('POST',))
 @permission_classes([AllowAny])
 def token_generate(request):
-    """Выдаёт JWT-токен в обмен на код подверждения."""
+    """Выдаёт JWT-токен в обмен на код подтверждения."""
 
     serializer = TokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    username = serializer.validated_data['username']
-    user = get_object_or_404(User, username=username)
-    confirmation_code = serializer.validated_data['confirmation_code']
-    if not default_token_generator.check_token(user, confirmation_code):
-        return Response(
-            {'confirmation_code': 'Неверный код подтверждения'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    user = serializer.validated_data['user']
     new_token = AccessToken.for_user(user)
     return Response({'token': str(new_token)}, status=status.HTTP_200_OK)
 
@@ -195,7 +175,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = (IsAdmin,)
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
