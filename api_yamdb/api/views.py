@@ -1,5 +1,3 @@
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -8,13 +6,18 @@ from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from reviews.models import Category, Genre, Title, Review
+from .permissions import (
+    IsAdmin,
+    IsAdminOrReadOnly,
+    IsAuthorOrModeratorOrAdminOrReadOnly,
+)
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -94,7 +97,7 @@ class GenreViewSet(
 ):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = (IsAdminOrReadOnly,)
     lookup_field = 'slug'
     pagination_class = PageNumberPagination
     filter_backends = (filters.SearchFilter,)
@@ -105,7 +108,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с отзывами."""
 
     serializer_class = ReviewSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+    permission_classes = (IsAuthorOrModeratorOrAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_title(self):
@@ -123,7 +126,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     """ViewSet для работы с комментариями."""
 
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthorOrModeratorOrAdminOrReadOnly]
+    permission_classes = (IsAuthorOrModeratorOrAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_review(self):
@@ -141,7 +144,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 @api_view(('POST',))
-@permission_classes([AllowAny])
+@permission_classes((AllowAny,))
 def signup(request):
     """Регистрация пользователей."""
 
@@ -159,7 +162,7 @@ def signup(request):
 
 
 @api_view(('POST',))
-@permission_classes([AllowAny])
+@permission_classes((AllowAny,))
 def token_generate(request):
     """Выдаёт JWT-токен в обмен на код подтверждения."""
 
