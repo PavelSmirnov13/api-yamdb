@@ -159,7 +159,7 @@ def signup(request):
     if User.objects.filter(email=email).exclude(username=username).exists():
         conflicts['email'] = ['Почта занята другим пользователем']
     if conflicts:
-        return Response(conflicts, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(conflicts)
     user, _ = User.objects.get_or_create(username=username, email=email)
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
